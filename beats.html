@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hindo — Beat Marketplace</title>
+  <meta name="description" content="Beats for sale from Hindo producers. Preview in the app or here, own it the same day." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Page-specific styles for the marketplace grid */
+    .beats-hero { padding: 72px 0 36px; text-align: center; }
+    .beats-hero h1 { font-size: clamp(30px, 5vw, 44px); font-weight: 900; letter-spacing: -0.02em; }
+    .beats-hero p { margin: 12px auto 0; max-width: 520px; color: var(--muted); font-size: 15px; }
+    .beats-note {
+      display: inline-block; margin-top: 18px;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--orange); background: rgba(249, 115, 22, 0.12);
+      padding: 6px 14px; border-radius: 20px;
+    }
+    .beat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+      padding-bottom: 72px;
+    }
+    .beat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: border-color 0.2s;
+    }
+    .beat-card.highlight { border-color: var(--orange); }
+    .beat-cover {
+      width: 64px; height: 64px; border-radius: 12px;
+      background: var(--surface-2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; color: var(--faint);
+      background-size: cover; background-position: center;
+      cursor: pointer; position: relative; flex-shrink: 0;
+      border: none; padding: 0;
+    }
+    .beat-cover::after {
+      content: attr(data-state);
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0, 0, 0, 0.45); border-radius: 12px;
+      color: #fff; font-size: 18px;
+    }
+    .beat-meta { flex: 1; min-width: 0; }
+    .beat-title {
+      font-size: 15px; font-weight: 700; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .beat-producer { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .beat-price { font-size: 13px; font-weight: 700; color: var(--orange); margin-top: 6px; }
+    .beat-buy {
+      background: rgba(249, 115, 22, 0.14); color: var(--orange);
+      border: none; border-radius: 20px;
+      font-family: inherit; font-size: 12px; font-weight: 700;
+      padding: 10px 16px; cursor: pointer; white-space: nowrap;
+    }
+    .beat-buy:hover { background: rgba(249, 115, 22, 0.22); }
+    .status { text-align: center; color: var(--muted); padding: 60px 0 90px; font-size: 15px; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="container nav-inner">
+      <a class="logo" href="index.html"><span class="glow">HINDO</span><span class="fill">HINDO</span></a>
+      <div class="nav-links">
+        <a href="index.html#discover">Discover</a>
+        <a href="index.html#signal">Signal Points</a>
+        <a href="index.html#radio">Radio</a>
+        <a class="nav-cta" href="index.html#get">Get the app</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="beats-hero">
+    <div class="container">
+      <h1>Beat Marketplace</h1>
+      <p>
+        A feed of Hindo producers and the beats they've put up —
+        exclusively producers. Preview the clip here or in the app;
+        tap Get this beat and the full track and contract land in your inbox.
+      </p>
+      <span class="beats-note">Opening soon</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="status" class="status">Loading beats…</div>
+    <div id="grid" class="beat-grid" hidden></div>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <a class="logo" href="index.html"><span class="glow">HINDO</span><span class="fill">HINDO</span></a>
+      <div class="footer-links">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms of Service</a>
+        <a href="mailto:hello@hindo.app">Contact</a>
+      </div>
+      <p class="copyright">© 2026 Hindo. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Public anon credentials — same ones shipped inside the app bundle.
+    // Reads go through the beat_marketplace() RPC (security definer, producers-only rows).
+    const SUPABASE_URL = 'https://zcjpptguiohqzjnyyxhq.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjanBwdGd1aW9ocXpqbnl5eGhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTYwOTksImV4cCI6MjA5NDMzMjA5OX0.a9zO5fDhCI4-qzwOl7m6oePU_iNmHJFO6D9VAFfcheg';
+
+    const statusEl = document.getElementById('status');
+    const gridEl = document.getElementById('grid');
+
+    // Single shared preview player — plays each beat's clip window
+    const player = new Audio();
+    let playing = null;   // slot_id currently previewing
+    let stopTimer = null;
+
+    function stopPreview() {
+      player.pause();
+      clearTimeout(stopTimer);
+      if (playing) {
+        const btn = document.getElementById('cover-' + playing);
+        if (btn) btn.dataset.state = '▶';
+      }
+      playing = null;
+    }
+
+    function preview(beat) {
+      if (playing === beat.slot_id) { stopPreview(); return; }
+      stopPreview();
+      if (!beat.audio_url) return;
+      const start = beat.clip_start || 0;
+      const dur = Math.min(beat.clip_duration || 25, 25);
+      player.src = beat.audio_url;
+      player.currentTime = start;
+      player.play().then(() => {
+        playing = beat.slot_id;
+        document.getElementById('cover-' + beat.slot_id).dataset.state = '⏸';
+        stopTimer = setTimeout(stopPreview, dur * 1000);
+      }).catch(() => {});
+    }
+
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s ?? '';
+      return d.innerHTML;
+    }
+
+    function render(beats) {
+      if (!beats.length) {
+        statusEl.textContent = 'No beats listed yet — Hindo producers will start dropping soon.';
+        return;
+      }
+      statusEl.hidden = true;
+      gridEl.hidden = false;
+      gridEl.innerHTML = beats.map((b) => `
+        <div class="beat-card" id="beat-${b.slot_id}">
+          <button class="beat-cover" id="cover-${b.slot_id}" data-state="▶"
+                  style="${b.cover_url || b.avatar_url ? `background-image:url('${esc(b.cover_url || b.avatar_url)}')` : ''}"
+                  aria-label="Preview ${esc(b.title)}"></button>
+          <div class="beat-meta">
+            <div class="beat-title">${esc(b.title)}</div>
+            <div class="beat-producer">${esc(b.producer)}${b.genre ? ' · ' + esc(b.genre) : ''}</div>
+            ${b.price != null ? `<div class="beat-price">$${Number(b.price).toFixed(2)}</div>` : ''}
+          </div>
+          <button class="beat-buy" data-id="${b.slot_id}">Get this beat</button>
+        </div>
+      `).join('');
+
+      beats.forEach((b) => {
+        document.getElementById('cover-' + b.slot_id).addEventListener('click', () => preview(b));
+      });
+      gridEl.querySelectorAll('.beat-buy').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          alert('Drops are opening soon — this is where the full track will land.');
+        });
+      });
+
+      // Deep link from the app: beats.html#beat-{slotId}
+      if (location.hash.startsWith('#beat-')) {
+        const target = document.getElementById(location.hash.slice(1));
+        if (target) {
+          target.classList.add('highlight');
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }
+
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/beat_marketplace`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: '{}',
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('rpc failed'))))
+      .then(render)
+      .catch(() => {
+        statusEl.textContent = 'Could not load beats right now — try again in a bit.';
+      });
+  </script>
+
+</body>
+</html>
