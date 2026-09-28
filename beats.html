@@ -67,7 +67,18 @@
       padding: 10px 16px; cursor: pointer; white-space: nowrap;
     }
     .beat-buy:hover { background: rgba(249, 115, 22, 0.22); }
+    .beat-buy[disabled] {
+      background: var(--surface-2); color: var(--faint); cursor: default;
+    }
+    .beat-buy[disabled]:hover { background: var(--surface-2); }
     .status { text-align: center; color: var(--muted); padding: 60px 0 90px; font-size: 15px; }
+    .order-banner {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.32);
+      border-radius: 16px; padding: 18px 20px; margin-bottom: 24px;
+    }
+    .order-banner strong { color: #10B981; }
+    .order-banner p { margin: 6px 0 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
   </style>
 </head>
 <body>
@@ -90,13 +101,14 @@
       <p>
         A feed of Hindo producers and the beats they've put up —
         exclusively producers. Preview the clip here or in the app;
-        tap Get this beat and the full track and contract land in your inbox.
+        tap Get this beat and the full track and licence land in your inbox.
       </p>
-      <span class="beats-note">Opening soon</span>
+      <span class="beats-note">Instant delivery</span>
     </div>
   </header>
 
   <main class="container">
+    <div id="order-banner" class="order-banner" hidden></div>
     <div id="status" class="status">Loading beats…</div>
     <div id="grid" class="beat-grid" hidden></div>
   </main>
@@ -119,8 +131,11 @@
     const SUPABASE_URL = 'https://zcjpptguiohqzjnyyxhq.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjanBwdGd1aW9ocXpqbnl5eGhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTYwOTksImV4cCI6MjA5NDMzMjA5OX0.a9zO5fDhCI4-qzwOl7m6oePU_iNmHJFO6D9VAFfcheg';
 
+    const EDGE_URL = `${SUPABASE_URL}/functions/v1`;
+
     const statusEl = document.getElementById('status');
     const gridEl = document.getElementById('grid');
+    const bannerEl = document.getElementById('order-banner');
 
     // Single shared preview player — plays each beat's clip window
     const player = new Audio();
@@ -142,7 +157,9 @@
       stopPreview();
       if (!beat.audio_url) return;
       const start = beat.clip_start || 0;
-      const dur = Math.min(beat.clip_duration || 25, 25);
+      // For-sale beats get the longer 40s window (see BEAT_PREVIEW_SECONDS in
+      // the app's lib/constants.ts) — every beat on this page is for sale.
+      const dur = Math.min(beat.clip_duration || 40, 40);
       player.src = beat.audio_url;
       player.currentTime = start;
       player.play().then(() => {
@@ -156,6 +173,50 @@
       const d = document.createElement('div');
       d.textContent = s ?? '';
       return d.innerHTML;
+    }
+
+    // Hands a slot id to the edge function, which reads the price, the producer
+    // and their payout account server-side and returns a Stripe Checkout URL.
+    // Nothing about the price is decided in this browser.
+    async function startCheckout(btn) {
+      const slotId = btn.dataset.id;
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'One moment…';
+      try {
+        const res = await fetch(`${EDGE_URL}/create-beat-checkout`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ slot_id: slotId }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.url) throw new Error(data.error || 'Could not start checkout');
+        stopPreview();
+        window.location.href = data.url;
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = original;
+        alert(e.message || 'Something went wrong — try again in a moment.');
+      }
+    }
+
+    // Stripe sends the buyer back here after paying. The email is the real
+    // receipt; this is just so the page doesn't look like nothing happened.
+    function showOrderBanner() {
+      const params = new URLSearchParams(location.search);
+      if (params.get('order') !== 'done') return;
+      const beat = params.get('beat');
+      bannerEl.innerHTML = `
+        <strong>Payment received${beat ? ' — ' + esc(beat) : ''}.</strong>
+        <p>
+          Check your email: the download link and your licence PDF are on their way.
+          The link is good for 7 days, so save the file somewhere safe.
+        </p>`;
+      bannerEl.hidden = false;
+      history.replaceState({}, '', location.pathname);
     }
 
     function render(beats) {
@@ -175,7 +236,11 @@
             <div class="beat-producer">${esc(b.producer)}${b.genre ? ' · ' + esc(b.genre) : ''}</div>
             ${b.price != null ? `<div class="beat-price">$${Number(b.price).toFixed(2)}</div>` : ''}
           </div>
-          <button class="beat-buy" data-id="${b.slot_id}">Get this beat</button>
+          <button class="beat-buy" data-id="${b.slot_id}"
+                  ${b.sellable ? '' : 'disabled'}
+                  title="${b.sellable ? '' : 'This producer is still setting up'}">
+            ${b.sellable ? 'Get this beat' : 'Not ready yet'}
+          </button>
         </div>
       `).join('');
 
@@ -183,9 +248,7 @@
         document.getElementById('cover-' + b.slot_id).addEventListener('click', () => preview(b));
       });
       gridEl.querySelectorAll('.beat-buy').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          alert('Drops are opening soon — this is where the full track will land.');
-        });
+        btn.addEventListener('click', () => startCheckout(btn));
       });
 
       // Deep link from the app: beats.html#beat-{slotId}
@@ -197,6 +260,8 @@
         }
       }
     }
+
+    showOrderBanner();
 
     fetch(`${SUPABASE_URL}/rest/v1/rpc/beat_marketplace`, {
       method: 'POST',
