@@ -6,6 +6,7 @@ Static marketing site for Hindo — no build step, no dependencies.
 
 - `index.html` — landing page (feed, Signal Points, Radio, beat marketplace teaser)
 - `privacy.html` / `terms.html` — legal pages (source of truth: `docs/privacy_policy.html`, `docs/terms_of_service.html` — keep in sync)
+- `support.html` — help/FAQ + contact; this is the App Store Connect **Support URL**
 - `styles.css` — shared styles; mirrors the app theme (black surfaces, purple `#8B5CF6` / orange `#F97316` accents, Roboto)
 
 ## Preview locally
