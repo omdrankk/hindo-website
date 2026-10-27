@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hindo — Beat Vault</title>
+  <meta name="description" content="A Hindo producer's beats — preview the clip, then get the full track and licence by email." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* The producer's card, built to read like the app's SwipeCard: square
+       cover card with the spinning vinyl, info block, transport row, and the
+       action pill — only for-sale beats as slots. Opened from the app's
+       "Get This Beat" (beat.html?beat={slotId}). */
+    body { background: #121212; }
+    nav { background: rgba(18, 18, 18, 0.86); border-bottom-color: #282828; }
+    .card-wrap { max-width: 440px; margin: 0 auto; padding: 22px 16px 60px; }
+
+    .cover {
+      position: relative; width: 100%; aspect-ratio: 1;
+      background: #171717; border-radius: 18px; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .bars { position: absolute; top: 12px; left: 14px; right: 14px; display: flex; gap: 4px; z-index: 2; }
+    .bar { flex: 1; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.22); }
+    .bar.on { background: #fff; }
+    .star {
+      position: absolute; top: 24px; right: 14px; z-index: 2;
+      color: #F59E0B; font-size: 18px;
+    }
+    .badge {
+      position: absolute; bottom: 12px; left: 12px; z-index: 2;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+      color: #ccc; background: rgba(0, 0, 0, 0.5); padding: 4px 9px; border-radius: 10px;
+    }
+
+    /* Vinyl: dark grooves, cover art on the label, black spindle hole */
+    .disc {
+      width: 78%; aspect-ratio: 1; border-radius: 50%;
+      background: repeating-radial-gradient(circle, #1a1a1a 0 2px, #0f0f0f 2px 4px);
+      box-shadow: 0 0 46px rgba(139, 92, 246, 0.28);
+      display: flex; align-items: center; justify-content: center;
+      animation: spin 6s linear infinite; animation-play-state: paused;
+    }
+    .disc.playing { animation-play-state: running; }
+    .label {
+      width: 42%; aspect-ratio: 1; border-radius: 50%;
+      background: #8B5CF6 center / cover no-repeat;
+      border: 3px solid #0d0d0d; position: relative;
+    }
+    .label::after {
+      content: ''; position: absolute; left: 50%; top: 50%;
+      width: 12%; aspect-ratio: 1; border-radius: 50%;
+      background: #000; transform: translate(-50%, -50%);
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .info { padding: 18px 2px 0; }
+    .artist-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .artist { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+    .avatar {
+      width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+      background: #242424 center / cover no-repeat;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; color: #686868;
+    }
+    .title { margin-top: 4px; font-size: 15px; color: #E5E5E5; font-weight: 500; }
+    .meta { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; color: #686868; }
+    .pill { padding: 3px 10px; border-radius: 12px; font-weight: 500; }
+    .pill.genre { color: #8B5CF6; background: rgba(139, 92, 246, 0.16); }
+    .pill.role { color: #60A5FA; background: rgba(96, 165, 250, 0.14); }
+
+    .tags { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag { font-size: 11px; font-weight: 500; color: #F97316; background: rgba(249, 115, 22, 0.12); padding: 3px 9px; border-radius: 10px; }
+    .links { margin-top: 26px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+    .link {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 9px 14px; border-radius: 20px; text-decoration: none;
+      background: rgba(255, 255, 255, 0.08); color: #E5E5E5; font-size: 13px; font-weight: 500;
+    }
+    .link:hover { background: rgba(255, 255, 255, 0.14); }
+    .link i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .order-banner {
+      background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.32);
+      border-radius: 16px; padding: 16px 18px; margin-bottom: 18px; font-size: 14px; color: #CCCCCC; line-height: 1.6;
+    }
+    .order-banner strong { color: #10B981; }
+    .progress { margin-top: 16px; height: 3px; border-radius: 2px; background: #282828; overflow: hidden; }
+    .progress-fill { height: 100%; width: 0; background: #fff; }
+    .timer { margin-top: 6px; display: flex; justify-content: space-between; font-size: 11px; color: #686868; font-variant-numeric: tabular-nums; }
+
+    .controls { margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 34px; }
+    .nav-btn {
+      background: none; border: none; color: rgba(255, 255, 255, 0.65);
+      font-size: 34px; line-height: 1; cursor: pointer; padding: 4px 10px; font-family: inherit;
+    }
+    .nav-btn[disabled] { opacity: 0.2; cursor: default; }
+    .play {
+      width: 54px; height: 54px; border-radius: 50%; border: none; cursor: pointer;
+      background: rgba(255, 255, 255, 0.92); box-shadow: 0 2px 5px rgba(0, 0, 0, 0.18);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .play svg { width: 22px; height: 22px; fill: #121212; }
+
+    .get {
+      margin-top: 22px; width: 100%; border: none; cursor: pointer;
+      padding: 15px; border-radius: 26px; font-family: inherit;
+      font-size: 15px; font-weight: 700; letter-spacing: 0.01em;
+      background: #F97316; color: #fff;
+    }
+    .get:hover { filter: brightness(1.07); }
+    .get[disabled] { background: #242424; color: #686868; cursor: default; filter: none; }
+    .fineprint { margin-top: 10px; text-align: center; font-size: 12px; color: #686868; line-height: 1.6; }
+    .browse { display: block; margin-top: 22px; text-align: center; color: #CCCCCC; font-size: 13px; text-decoration: none; }
+    .browse:hover { color: #fff; }
+    .status { text-align: center; color: #686868; padding: 80px 0; font-size: 15px; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="container nav-inner">
+      <a class="logo" href="index.html"><span class="glow">HINDO</span><span class="fill">HINDO</span></a>
+      <div class="nav-links">
+        <a href="beats.html">Beat Vault</a>
+        <a class="nav-cta" href="index.html#get">Get the app</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="card-wrap">
+    <div id="order-banner" class="order-banner" hidden></div>
+    <div id="status" class="status">Loading…</div>
+
+    <div id="card" hidden>
+      <div class="cover">
+        <div id="bars" class="bars"></div>
+        <span class="star" title="For sale">★</span>
+        <div id="disc" class="disc"><div id="label" class="label"></div></div>
+        <span class="badge">BEAT</span>
+      </div>
+
+      <div class="info">
+        <div class="artist-row">
+          <div id="artist" class="artist"></div>
+          <div id="avatar" class="avatar"></div>
+        </div>
+        <div id="title" class="title"></div>
+        <div id="meta" class="meta"></div>
+        <div id="tags" class="tags"></div>
+        <div class="progress"><div id="fill" class="progress-fill"></div></div>
+        <div class="timer"><span id="elapsed">0:00</span><span id="total">0:00</span></div>
+      </div>
+
+      <div class="controls">
+        <button id="prev" class="nav-btn" aria-label="Previous beat">‹</button>
+        <button id="play" class="play" aria-label="Play preview"></button>
+        <button id="next" class="nav-btn" aria-label="Next beat">›</button>
+      </div>
+
+      <button id="get" class="get">Get this Beat</button>
+      <p id="fineprint" class="fineprint"></p>
+      <div id="links" class="links"></div>
+      <a class="browse" href="beats.html">Browse the Beat Vault →</a>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <a class="logo" href="index.html"><span class="glow">HINDO</span><span class="fill">HINDO</span></a>
+      <div class="footer-links">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms of Service</a>
+        <a href="support.html">Support</a>
+      </div>
+      <p class="copyright">© 2026 Hindo Media LLC. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Public anon credentials — same ones shipped inside the app bundle and
+    // beats.html. Reads go through beat_marketplace() (producers-only rows).
+    const SUPABASE_URL = 'https://zcjpptguiohqzjnyyxhq.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjanBwdGd1aW9ocXpqbnl5eGhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTYwOTksImV4cCI6MjA5NDMzMjA5OX0.a9zO5fDhCI4-qzwOl7m6oePU_iNmHJFO6D9VAFfcheg';
+    const EDGE_URL = `${SUPABASE_URL}/functions/v1`;
+    const PREVIEW_SECONDS = 40;   // BEAT_PREVIEW_SECONDS in the app
+
+    const PLAY_ICON = '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg>';
+    const PAUSE_ICON = '<svg viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>';
+    const $ = (id) => document.getElementById(id);
+
+    // Same platforms + colours as SOCIAL_PLATFORMS in the app's lib/constants.ts
+    const SOCIAL = [
+      ['spotify', 'Spotify', '#1DB954'],
+      ['appleMusic', 'Apple Music', '#FC3C44'],
+      ['youtube', 'YouTube', '#FF0000'],
+      ['instagram', 'Instagram', '#E1306C'],
+      ['twitter', 'Twitter', '#1DA1F2'],
+      ['soundcloud', 'SoundCloud', '#FF5500'],
+    ];
+    const ROLE_LABEL = { artist: 'Vocalist', producer: 'Producer', engineer: 'Engineer', dj: 'DJ' };
+    let roles = ['producer'];   // replaced by the producer's real roles once loaded
+
+    let beats = [];      // this producer's for-sale beats
+    let index = 0;
+    const player = new Audio();
+    let raf = null;
+
+    const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+    const clipStart = (b) => b.clip_start || 0;
+    const clipLen = (b) => Math.min(b.clip_duration || PREVIEW_SECONDS, PREVIEW_SECONDS);
+
+    function setPlaying(on) {
+      $('play').innerHTML = on ? PAUSE_ICON : PLAY_ICON;
+      $('play').setAttribute('aria-label', on ? 'Pause preview' : 'Play preview');
+      $('disc').classList.toggle('playing', on);
+    }
+
+    function stop() {
+      player.pause();
+      cancelAnimationFrame(raf);
+      setPlaying(false);
+    }
+
+    // Progress runs off the audio clock, windowed to the clip like the app
+    function tick() {
+      const b = beats[index];
+      const t = Math.max(0, player.currentTime - clipStart(b));
+      const len = clipLen(b);
+      if (t >= len) {
+        stop();
+        player.currentTime = clipStart(b);
+        $('fill').style.width = '100%';
+        $('elapsed').textContent = fmt(len);
+        return;
+      }
+      $('fill').style.width = `${(t / len) * 100}%`;
+      $('elapsed').textContent = fmt(t);
+      raf = requestAnimationFrame(tick);
+    }
+
+    function togglePlay() {
+      const b = beats[index];
+      if (!b.audio_url) return;
+      if (!player.paused) { stop(); return; }
+      // Restart the window if it already finished (same rule as the app)
+      if (player.currentTime < clipStart(b) || player.currentTime >= clipStart(b) + clipLen(b)) {
+        player.currentTime = clipStart(b);
+      }
+      player.play().then(() => { setPlaying(true); raf = requestAnimationFrame(tick); }).catch(() => {});
+    }
+
+    function show(i) {
+      stop();
+      index = i;
+      const b = beats[index];
+      player.src = b.audio_url || '';
+      player.currentTime = clipStart(b);
+
+      $('bars').innerHTML = beats.length > 1
+        ? beats.map((_, k) => `<div class="bar${k === index ? ' on' : ''}"></div>`).join('')
+        : '';
+      const art = b.cover_url || b.avatar_url;
+      $('label').style.backgroundImage = art ? `url("${encodeURI(art)}")` : '';
+      $('title').textContent = b.title;
+      $('fill').style.width = '0';
+      $('elapsed').textContent = '0:00';
+      $('total').textContent = fmt(clipLen(b));
+      $('prev').disabled = index === 0;
+      $('next').disabled = index === beats.length - 1;
+
+      const meta = [];
+      roles.forEach((r) => meta.push(`<span class="pill role">${esc(ROLE_LABEL[r] || r)}</span>`));
+      if (b.genre) meta.push(`<span class="pill genre">${esc(b.genre)}</span>`);
+      if (b.city) meta.push(`<span>${esc(b.city)}</span>`);
+      if (beats.length > 1) meta.push(`<span>${index + 1} / ${beats.length}</span>`);
+      $('meta').innerHTML = meta.join('<span>·</span>');
+
+      const get = $('get');
+      get.disabled = !b.sellable;
+      get.textContent = b.sellable
+        ? `Get this Beat${b.price != null ? ' · $' + Number(b.price).toFixed(2) : ''}`
+        : 'Not ready yet';
+      $('fineprint').textContent = b.sellable
+        ? 'Secure checkout by Stripe. The full track and your licence PDF arrive by email.'
+        : 'This producer is still setting up payouts — check back soon.';
+
+      history.replaceState({}, '', `${location.pathname}?beat=${b.slot_id}`);
+    }
+
+    // Same rule as normalizeUrl() in the app: bare handles/domains get https://
+    function normalizeUrl(raw) {
+      const v = (raw || '').trim();
+      if (!v) return '';
+      return /^https?:\/\//i.test(v) ? v : `https://${v.replace(/^\/+/, '')}`;
+    }
+
+    // Tags, roles and social links aren't in beat_marketplace(); profiles are
+    // publicly readable, so fetch just those three columns for this producer.
+    function loadProfileExtras(producerId) {
+      fetch(`${SUPABASE_URL}/rest/v1/profiles?select=tags,roles,social_links&id=eq.${encodeURIComponent(producerId)}`, {
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+      })
+        .then((r) => (r.ok ? r.json() : []))
+        .then(([p]) => {
+          if (!p) return;
+          if (Array.isArray(p.roles) && p.roles.length) {
+            // A beat in the Vault means they produce, whatever else they list
+            roles = p.roles.includes('producer') ? p.roles : ['producer', ...p.roles];
+            show(index);
+          }
+          $('tags').innerHTML = (p.tags || []).map((t) => `<span class="tag">${esc(t)}</span>`).join('');
+          const links = p.social_links || {};
+          $('links').innerHTML = SOCIAL
+            .filter(([key]) => normalizeUrl(links[key]))
+            .map(([key, label, color]) =>
+              `<a class="link" href="${esc(normalizeUrl(links[key]))}" target="_blank" rel="noopener noreferrer"><i style="background:${color}"></i>${label}</a>`)
+            .join('');
+        })
+        .catch(() => {});
+    }
+
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s ?? '';
+      return d.innerHTML;
+    }
+
+    // Same contract as beats.html: send only the slot id; the edge function
+    // reads price, producer and payout account server-side.
+    async function checkout() {
+      const b = beats[index];
+      const btn = $('get');
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'One moment…';
+      try {
+        const res = await fetch(`${EDGE_URL}/create-beat-checkout`, {
+          method: 'POST',
+          headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slot_id: b.slot_id }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.url) throw new Error(data.error || 'Could not start checkout');
+        stop();
+        window.location.href = data.url;
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = original;
+        alert(e.message || 'Something went wrong — try again in a moment.');
+      }
+    }
+
+    function render(rows) {
+      const slotId = new URLSearchParams(location.search).get('beat');
+      const target = rows.find((r) => r.slot_id === slotId);
+      if (!target) {
+        $('status').innerHTML = 'That beat isn\'t available anymore. <a href="beats.html" style="color:#F97316">Browse the Beat Vault</a>';
+        return;
+      }
+      beats = rows.filter((r) => r.producer_id === target.producer_id);
+      document.title = `${target.producer} — Beat Vault · Hindo`;
+      $('artist').textContent = target.producer;
+      if (target.avatar_url) $('avatar').style.backgroundImage = `url("${encodeURI(target.avatar_url)}")`;
+      else $('avatar').textContent = (target.producer[0] || '').toUpperCase();
+
+      $('status').hidden = true;
+      $('card').hidden = false;
+      show(beats.findIndex((b) => b.slot_id === slotId));
+      loadProfileExtras(target.producer_id);
+    }
+
+    // Stripe sends the buyer back here after paying. The email is the real
+    // receipt; this is just so the page doesn't look like nothing happened.
+    function showOrderBanner() {
+      const params = new URLSearchParams(location.search);
+      if (params.get('order') !== 'done') return;
+      $('order-banner').innerHTML = `<strong>Payment received.</strong> Check your email — the download
+        link and your licence PDF are on their way. The link is good for 7 days, so save the file.`;
+      $('order-banner').hidden = false;
+    }
+
+    $('play').addEventListener('click', togglePlay);
+    $('prev').addEventListener('click', () => index > 0 && show(index - 1));
+    $('next').addEventListener('click', () => index < beats.length - 1 && show(index + 1));
+    $('get').addEventListener('click', checkout);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' && index > 0) show(index - 1);
+      if (e.key === 'ArrowRight' && index < beats.length - 1) show(index + 1);
+    });
+    setPlaying(false);
+    showOrderBanner();
+
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/beat_marketplace`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: '{}',
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('rpc failed'))))
+      .then(render)
+      .catch(() => { $('status').textContent = 'Could not load this beat right now — try again in a bit.'; });
+  </script>
+
+</body>
+</html>

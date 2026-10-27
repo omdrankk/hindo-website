@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hindo — Beat Marketplace</title>
+  <title>Hindo — Beat Vault</title>
   <meta name="description" content="Beats for sale from Hindo producers. Preview in the app or here, own it the same day." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -57,7 +57,9 @@
     .beat-title {
       font-size: 15px; font-weight: 700; color: var(--text);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      display: block; text-decoration: none;
     }
+    a.beat-title:hover { text-decoration: underline; }
     .beat-producer { font-size: 12px; color: var(--muted); margin-top: 2px; }
     .beat-price { font-size: 13px; font-weight: 700; color: var(--orange); margin-top: 6px; }
     .beat-buy {
@@ -97,7 +99,7 @@
 
   <header class="beats-hero">
     <div class="container">
-      <h1>Beat Marketplace</h1>
+      <h1>Beat Vault</h1>
       <p>
         A feed of Hindo producers and the beats they've put up —
         exclusively producers. Preview the clip here or in the app;
@@ -232,7 +234,7 @@
                   style="${b.cover_url || b.avatar_url ? `background-image:url('${esc(b.cover_url || b.avatar_url)}')` : ''}"
                   aria-label="Preview ${esc(b.title)}"></button>
           <div class="beat-meta">
-            <div class="beat-title">${esc(b.title)}</div>
+            <a class="beat-title" href="beat.html?beat=${b.slot_id}">${esc(b.title)}</a>
             <div class="beat-producer">${esc(b.producer)}${b.genre ? ' · ' + esc(b.genre) : ''}</div>
             ${b.price != null ? `<div class="beat-price">$${Number(b.price).toFixed(2)}</div>` : ''}
           </div>
