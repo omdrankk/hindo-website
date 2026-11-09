@@ -185,7 +185,10 @@
     const SUPABASE_URL = 'https://zcjpptguiohqzjnyyxhq.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjanBwdGd1aW9ocXpqbnl5eGhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTYwOTksImV4cCI6MjA5NDMzMjA5OX0.a9zO5fDhCI4-qzwOl7m6oePU_iNmHJFO6D9VAFfcheg';
     const EDGE_URL = `${SUPABASE_URL}/functions/v1`;
-    const PREVIEW_SECONDS = 40;   // BEAT_PREVIEW_SECONDS in the app
+    // New listings: ≤30s preview file cut by the app (BEAT_PREVIEW_SECONDS).
+    // Older listings were allowed 40s, so that stays the ceiling.
+    const PREVIEW_SECONDS = 30;
+    const MAX_PREVIEW_SECONDS = 40;
 
     const PLAY_ICON = '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg>';
     const PAUSE_ICON = '<svg viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>';
@@ -210,7 +213,7 @@
 
     const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
     const clipStart = (b) => b.clip_start || 0;
-    const clipLen = (b) => Math.min(b.clip_duration || PREVIEW_SECONDS, PREVIEW_SECONDS);
+    const clipLen = (b) => Math.min(b.clip_duration || PREVIEW_SECONDS, MAX_PREVIEW_SECONDS);
 
     function setPlaying(on) {
       $('play').innerHTML = on ? PAUSE_ICON : PLAY_ICON;

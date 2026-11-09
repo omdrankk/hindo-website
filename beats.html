@@ -159,9 +159,10 @@
       stopPreview();
       if (!beat.audio_url) return;
       const start = beat.clip_start || 0;
-      // For-sale beats get the longer 40s window (see BEAT_PREVIEW_SECONDS in
-      // the app's lib/constants.ts) — every beat on this page is for sale.
-      const dur = Math.min(beat.clip_duration || 40, 40);
+      // Play the listing's own window. New listings are cut to a ≤30s preview
+      // file by the app (BEAT_PREVIEW_SECONDS in lib/constants.ts); older ones
+      // were listed with up to 40s, so 40 stays the ceiling.
+      const dur = Math.min(beat.clip_duration || 30, 40);
       player.src = beat.audio_url;
       player.currentTime = start;
       player.play().then(() => {
